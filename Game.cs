@@ -4,71 +4,77 @@ namespace SnakeGame
 {
     public class Game
     {
-        public enum Direction
-        {
-            Up, Down, Left, Right
-        }
+        private bool exit = false;
+        private int score = 0;
+        private Timer timer;
+        private DateTime startTime;
+        private TimeSpan time;
 
-        public bool exit = false;
-        public int score = 0;
+        private Queue<Point> snake = new Queue<Point>();
+        private char[,] board = new char[25, 100];
 
-        public Queue<Tuple<int, int>> snake = new Queue<Tuple<int, int>>();
-        public char[,] board = new char[25, 100];
+        private Point fruitCoords;
+        private Point head;
 
-        public Tuple<int, int> fruitCoords;
-        public int x, y;
-
-        public Direction direction = Direction.Up;
+        private Direction direction = Direction.Up;
 
         public Game()
         {
             Random r = new Random();
 
             int fruitX = r.Next(1, this.board.GetLength(0) - 1), fruitY = r.Next(1, this.board.GetLength(1) - 1);
-            fruitCoords = Tuple.Create(fruitX, fruitY);
+            fruitCoords = new Point(fruitX, fruitY);
 
-            x = this.board.GetLength(0) / 2;
-            y = this.board.GetLength(1) / 2;
+            int x = this.board.GetLength(0) / 2;
+            int y = this.board.GetLength(1) / 2;
 
             this.direction = Direction.Up;
-            this.snake.Enqueue(Tuple.Create(x + 3, y));
-            this.snake.Enqueue(Tuple.Create(x + 2, y));
-            this.snake.Enqueue(Tuple.Create(x + 1, y));
-            this.snake.Enqueue(Tuple.Create(x, y));
+            this.snake.Enqueue(new Point(x + 3, y));
+            this.snake.Enqueue(new Point(x + 2, y));
+            this.snake.Enqueue(new Point(x + 1, y));
+            this.snake.Enqueue(new Point(x, y));
+
+            head = new Point(x, y);
+            timer = new Timer(TimerHandler, null, 0, 1000);
+            startTime = DateTime.Now;
+        }
+
+        private void TimerHandler(object? o)
+        {
+            this.time = DateTime.Now - this.startTime;
         }
 
         public void Play()
         {
-            Tuple<int, int> tp = Tuple.Create(x, y);
-            bool valid = !exit && x != 0 && y != 0 && x != this.board.GetLength(0) && y != this.board.GetLength(1) && CountItems(tp) < 2;
+            bool valid = !exit && head.X != 0 && head.Y != 0 && head.X != this.board.GetLength(0) && head.Y != this.board.GetLength(1) && CountItems(new Point(head.X, head.Y)) < 2;
 
             while (valid)
             {
-                tp = Tuple.Create(x, y);
+                Point point = new Point(head.X, head.Y);
 
                 this.PrintScore();
                 this.PrintBoard();
                 this.GetDirection();
                 this.MoveSnake();
                 Console.WriteLine(direction);
-                // this.PrintQueue();
 
-                valid = !exit && x != 0 && y != 0 && x != this.board.GetLength(0) - 1 && y != this.board.GetLength(1) - 1 && CountItems(tp) < 2;
-
-                Thread.Sleep(100);
+                valid = !exit && head.X != 0 && head.Y != 0 && head.X != this.board.GetLength(0) - 1 && head.Y != this.board.GetLength(1) - 1 && CountItems(new Point(head.X, head.Y)) < 2;
                 if (valid)
+                {
+                    Thread.Sleep(100);
                     Console.Clear();
+                }
             }
             Console.WriteLine($"Game ended with a score of {this.score}");
         }
 
-        public int CountItems(Tuple<int, int> tuple)
+        private int CountItems(Point point)
         {
             int counter = 0;
 
-            foreach (Tuple<int, int> item in this.snake)
+            foreach (Point item in this.snake)
             {
-                if (item.Item1 == tuple.Item1 && item.Item2 == tuple.Item2)
+                if (item.X == point.X && item.Y == point.Y)
                 {
                     counter++;
                 }
@@ -77,52 +83,54 @@ namespace SnakeGame
             return counter;
         }
 
-        public void PrintScore()
+        private void PrintScore()
         {
             Console.Write("Score: ");
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"{this.score}\n");
+            Console.Write($"{this.score}");
             Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"\t{time.Minutes.ToString("00")}:{time.Seconds.ToString("00")}\n");
         }
 
-        public void ExtendSnake()
+        private void ExtendSnake()
         {
-            this.snake.Enqueue(Tuple.Create(-1, -1));
+            this.snake.Enqueue(new Point(-1, -1));
         }
 
-        public void MoveSnake()
+        private void MoveSnake()
         {
             switch (this.direction)
             {
                 case Direction.Up:
-                    x--;
+                    head.X--;
                     break;
                 case Direction.Down:
-                    x++;
+                    head.X++;
                     break;
                 case Direction.Left:
-                    y--;
+                    head.Y--;
                     break;
                 case Direction.Right:
-                    y++;
+                    head.Y++;
                     break;
             }
 
             this.snake.Dequeue();
-            this.snake.Enqueue(Tuple.Create(x, y));
+            this.snake.Enqueue(head);
 
-            if (x == fruitCoords.Item1 && y == fruitCoords.Item2)
+            if (head.X == fruitCoords.X && head.Y == fruitCoords.Y)
             {
                 this.score++;
                 Random r = new Random();
 
                 int fruitX = r.Next(1, this.board.GetLength(0) - 1), fruitY = r.Next(1, this.board.GetLength(1) - 1);
                 this.ExtendSnake();
-                this.fruitCoords = Tuple.Create(fruitX, fruitY);
+                this.fruitCoords.X = fruitX;
+                this.fruitCoords.Y = fruitY;
             }
         }
 
-        public void GetDirection()
+        private void GetDirection()
         {
             if (Console.KeyAvailable)
             {
@@ -143,15 +151,15 @@ namespace SnakeGame
             }
         }
 
-        public void PrintQueue()
+        private void PrintQueue()
         {
-            foreach (Tuple<int, int> tuple in this.snake)
+            foreach (Point point in this.snake)
             {
-                Console.WriteLine(tuple);
+                Console.WriteLine(point);
             }
         }
 
-        public void PrintBoard()
+        private void PrintBoard()
         {
             for (int i = 0; i < this.board.GetLength(0); i++)
             {
@@ -163,9 +171,9 @@ namespace SnakeGame
                     }
                     else
                     {
-                        if (SnakeInCell(Tuple.Create(i, j)))
+                        if (SnakeInCell(new Point(i, j)))
                         {
-                            if (i == x && j == y)
+                            if (i == head.X && j == head.Y)
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 Console.Write("*");
@@ -180,7 +188,7 @@ namespace SnakeGame
                         }
                         else
                         {
-                            if (i == this.fruitCoords.Item1 && j == this.fruitCoords.Item2)
+                            if (i == this.fruitCoords.X && j == this.fruitCoords.Y)
                             {
                                 Console.ForegroundColor = ConsoleColor.Yellow;
                                 Console.Write("$");
@@ -198,11 +206,11 @@ namespace SnakeGame
             Console.WriteLine();
         }
 
-        public bool SnakeInCell(Tuple<int, int> coords)
+        private bool SnakeInCell(Point coords)
         {
-            foreach (Tuple<int, int> snakeCoords in this.snake)
+            foreach (Point snakeCoords in this.snake)
             {
-                if (snakeCoords.Item1 == coords.Item1 && snakeCoords.Item2 == coords.Item2)
+                if (snakeCoords.X == coords.X && snakeCoords.Y == coords.Y)
                 {
                     return true;
                 }
