@@ -6,6 +6,7 @@ namespace SnakeGame
     {
         private bool exit = false;
         private int score = 0;
+
         private Timer timer;
         private DateTime startTime;
         private TimeSpan time;
@@ -29,9 +30,9 @@ namespace SnakeGame
             int y = this.board.GetLength(1) / 2;
 
             this.direction = Direction.Up;
-            this.snake.Enqueue(new Point(x + 3, y));
-            this.snake.Enqueue(new Point(x + 2, y));
-            this.snake.Enqueue(new Point(x + 1, y));
+            this.snake.Enqueue(new Point(x - 3, y));
+            this.snake.Enqueue(new Point(x - 2, y));
+            this.snake.Enqueue(new Point(x - 1, y));
             this.snake.Enqueue(new Point(x, y));
 
             head = new Point(x, y);
@@ -102,10 +103,10 @@ namespace SnakeGame
             switch (this.direction)
             {
                 case Direction.Up:
-                    head.X--;
+                    head.X++;
                     break;
                 case Direction.Down:
-                    head.X++;
+                    head.X--;
                     break;
                 case Direction.Left:
                     head.Y--;
@@ -134,7 +135,7 @@ namespace SnakeGame
         {
             if (Console.KeyAvailable)
             {
-                ConsoleKey key = Console.ReadKey(true).Key;
+                ConsoleKey key = Console.ReadKey().Key;
 
                 if (key == ConsoleKey.UpArrow && direction != Direction.Down)
                     this.direction = Direction.Up;
@@ -161,7 +162,7 @@ namespace SnakeGame
 
         private void PrintBoard()
         {
-            for (int i = 0; i < this.board.GetLength(0); i++)
+            for (int i = this.board.GetLength(0) - 1; i >= 0; i--)
             {
                 for (int j = 0; j < this.board.GetLength(1); j++)
                 {
