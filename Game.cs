@@ -21,23 +21,38 @@ namespace SnakeGame
 
         public Game()
         {
-            Random r = new Random();
+            fruitCoords = this.generateFruit();
 
-            int fruitX = r.Next(1, this.board.GetLength(0) - 1), fruitY = r.Next(1, this.board.GetLength(1) - 1);
-            fruitCoords = new Point(fruitX, fruitY);
+            this.fillSnake();
 
-            int x = this.board.GetLength(0) / 2;
-            int y = this.board.GetLength(1) / 2;
-
-            this.direction = Direction.Up;
-            this.snake.Enqueue(new Point(x - 3, y));
-            this.snake.Enqueue(new Point(x - 2, y));
-            this.snake.Enqueue(new Point(x - 1, y));
-            this.snake.Enqueue(new Point(x, y));
-
-            head = new Point(x, y);
             timer = new Timer(TimerHandler, null, 0, 1000);
             startTime = DateTime.Now;
+        }
+
+        private void fillSnake()
+        {
+            // x is represented alongside the j axis on the board
+            // y is represented alongside the i axis on the board
+
+            int x = this.board.GetLength(1) / 2;
+            int y = this.board.GetLength(0) / 2;
+
+            // Append the end of the snake first so it gets dequeued first
+            this.snake.Enqueue(new Point(x, y - 3));
+            this.snake.Enqueue(new Point(x, y - 2));
+            this.snake.Enqueue(new Point(x, y - 1));
+            this.snake.Enqueue(new Point(x, y));
+
+            head = new Point(x, y); // Keep track of where the head of the snake is
+        }
+
+        private Point generateFruit()
+        {
+            Random r = new Random();
+
+            int fruitX = r.Next(1, this.board.GetLength(1) - 1), fruitY = r.Next(1, this.board.GetLength(0) - 1);
+
+            return new Point(fruitX, fruitY);
         }
 
         private void TimerHandler(object? o)
@@ -45,11 +60,18 @@ namespace SnakeGame
             this.time = DateTime.Now - this.startTime;
         }
 
+        private bool gameState()
+        {
+            bool xConditions = head.X != 0 && head.X != this.board.GetLength(1) - 1;
+            bool yConditions = head.Y != 0 && head.Y != this.board.GetLength(0) - 1;
+            bool noOverlaps = CountItems(new Point(head.X, head.Y)) < 2;
+
+            return !exit && xConditions && yConditions && noOverlaps;
+        }
+
         public void Play()
         {
-            bool valid = !exit && head.X != 0 && head.Y != 0 && head.X != this.board.GetLength(0) && head.Y != this.board.GetLength(1) && CountItems(new Point(head.X, head.Y)) < 2;
-
-            while (valid)
+            do
             {
                 Point point = new Point(head.X, head.Y);
 
@@ -59,13 +81,12 @@ namespace SnakeGame
                 this.MoveSnake();
                 Console.WriteLine(direction);
 
-                valid = !exit && head.X != 0 && head.Y != 0 && head.X != this.board.GetLength(0) - 1 && head.Y != this.board.GetLength(1) - 1 && CountItems(new Point(head.X, head.Y)) < 2;
-                if (valid)
-                {
-                    Thread.Sleep(100);
-                    Console.Clear();
-                }
-            }
+                Thread.Sleep(100);
+                Console.Clear();
+            } while (gameState());
+
+            this.PrintScore();
+            this.PrintBoard();
             Console.WriteLine($"Game ended with a score of {this.score}");
         }
 
@@ -103,16 +124,16 @@ namespace SnakeGame
             switch (this.direction)
             {
                 case Direction.Up:
-                    head.X++;
+                    head.Y++;
                     break;
                 case Direction.Down:
-                    head.X--;
-                    break;
-                case Direction.Left:
                     head.Y--;
                     break;
+                case Direction.Left:
+                    head.X--;
+                    break;
                 case Direction.Right:
-                    head.Y++;
+                    head.X++;
                     break;
             }
 
@@ -122,12 +143,8 @@ namespace SnakeGame
             if (head.X == fruitCoords.X && head.Y == fruitCoords.Y)
             {
                 this.score++;
-                Random r = new Random();
-
-                int fruitX = r.Next(1, this.board.GetLength(0) - 1), fruitY = r.Next(1, this.board.GetLength(1) - 1);
                 this.ExtendSnake();
-                this.fruitCoords.X = fruitX;
-                this.fruitCoords.Y = fruitY;
+                this.fruitCoords = this.generateFruit();
             }
         }
 
@@ -160,53 +177,6 @@ namespace SnakeGame
             }
         }
 
-        private void PrintBoard()
-        {
-            for (int i = this.board.GetLength(0) - 1; i >= 0; i--)
-            {
-                for (int j = 0; j < this.board.GetLength(1); j++)
-                {
-                    if (i == 0 || i == this.board.GetLength(0) - 1 || j == 0 || j == this.board.GetLength(1) - 1)
-                    {
-                        Console.Write("#");
-                    }
-                    else
-                    {
-                        if (SnakeInCell(new Point(i, j)))
-                        {
-                            if (i == head.X && j == head.Y)
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.Write("*");
-                                Console.ForegroundColor = ConsoleColor.White;
-                            }
-                            else
-                            {
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.Write("*");
-                                Console.ForegroundColor = ConsoleColor.White;
-                            }
-                        }
-                        else
-                        {
-                            if (i == this.fruitCoords.X && j == this.fruitCoords.Y)
-                            {
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.Write("$");
-                                Console.ForegroundColor = ConsoleColor.White;
-                            }
-                            else
-                            {
-                                Console.Write(" ");
-                            }
-                        }
-                    }
-                }
-                Console.WriteLine();
-            }
-            Console.WriteLine();
-        }
-
         private bool SnakeInCell(Point coords)
         {
             foreach (Point snakeCoords in this.snake)
@@ -217,6 +187,45 @@ namespace SnakeGame
                 }
             }
             return false;
+        }
+
+        private static void CustomPrint(char character, ConsoleColor color)
+        {
+            Console.ForegroundColor = color;
+            Console.Write($"{character}");
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        private void PrintBoard()
+        {
+            // Print the rows upside down so we represent correctly the (x, y) coordinates
+            for (int i = this.board.GetLength(0) - 1; i >= 0; i--)
+            {
+                for (int j = 0; j < this.board.GetLength(1); j++)
+                {
+                    if (i == 0 || i == this.board.GetLength(0) - 1 || j == 0 || j == this.board.GetLength(1) - 1)
+                        Console.Write("#");
+                    else
+                    {
+                        if (SnakeInCell(new Point(j, i)))
+                        {
+                            if (i == head.Y && j == head.X)
+                                CustomPrint('*', ConsoleColor.Red);
+                            else
+                                CustomPrint('*', ConsoleColor.Green);
+                        }
+                        else
+                        {
+                            if (i == this.fruitCoords.Y && j == this.fruitCoords.X)
+                                CustomPrint('$', ConsoleColor.Yellow);
+                            else
+                                Console.Write(" ");
+                        }
+                    }
+                }
+                Console.WriteLine();
+            }
+            Console.WriteLine();
         }
     }
 }
